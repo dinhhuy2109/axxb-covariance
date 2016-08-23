@@ -132,8 +132,8 @@ for n in range(iters):
     WZW = np.zeros(shape = (3,3))
     for i in range(ksamples):
         sigmaQ_i = sigmaRa
-        Rxhatbetai = np.dot(Rxhat,beta[i])
-        sigmaq_i = sigmata + np.dot(np.dot(Rxhat,sigmatb),np.transpose(Rxhat)) + np.dot(np.dot(SE3.Hat(Rxhatbetai),sigmaRx),np.transpose(SE3.Hat(Rxhatbetai)))
+        Rxhattbi = np.dot(Rxhat,tb[i])
+        sigmaq_i = sigmata + np.dot(np.dot(Rxhat,sigmatb),np.transpose(Rxhat)) + np.dot(np.dot(SE3.Hat(Rxhattbi),sigmaRx),np.transpose(SE3.Hat(Rxhattbi)))
         sigmaV_i = np.zeros((6,6))
         sigmaV_i[:3,:3] = sigmaQ_i
         sigmaV_i[3:6,3:6] = sigmaq_i
