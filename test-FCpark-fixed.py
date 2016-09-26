@@ -32,7 +32,7 @@ def Jacxia_i(Ra_i, txhat):
     Jacxia[3:6,:3] = -SE3.Hat(np.dot(Ra_i,txhat))
     return Jacxia
 
-ksamples = 50
+ksamples =50
 iters = 300
 # True X
 Rx = np.array([[ 0.97280147, -0.17360641,  0.15335616],
@@ -41,10 +41,19 @@ Rx = np.array([[ 0.97280147, -0.17360641,  0.15335616],
 Rx = SE3.VecToRot(np.random.random_sample(3))
 tx = np.array([0.341213,0.123214,-0.2])
 
-sigmaA = 1e-6*np.diag((2 , 3, 4, 5, 3,4))
+sigmaA = 1e-8*np.diag((2 , 3, 4, 5, 5,4))
 sigmaRa = sigmaA[3:,3:]
 sigmata = sigmaA[:3,:3]
-sigmaB = 1e-6*np.diag((2 , 5, 4, 9, 3,5))
+sigmaB = 1e-6*np.diag((2 , 5, 4, 0.09, 0.03,0.005))
+sigmaRb = sigmaB[3:,3:]
+sigmatb = sigmaB[:3,:3]
+
+sigmaA = 1e-10*np.diag((1, 1, 1, 1, 1, 1))
+sigmaRa = sigmaA[3:,3:]
+sigmata = sigmaA[:3,:3]
+diagonal = (0.0005, 0.003, 0.0005,0.025, 0.02, 0.05 )
+diagonal = [e**2 for e in diagonal]
+sigmaB = np.diag(diagonal)
 sigmaRb = sigmaB[3:,3:]
 sigmatb = sigmaB[:3,:3]
 print "real X:\n", Rx
@@ -96,10 +105,11 @@ for n in range(iters):
         Z_i = np.dot(np.dot(np.transpose(Jacbeta_i(Rxhat)),inv_sigmaV_i),Jacbeta_i(Rxhat))
         inv_Z_i = np.linalg.inv(Z_i)
         WZW += np.dot(np.dot(W_i,inv_Z_i),np.transpose(W_i))
+        # IPython.embed()
     sigmaRx = np.linalg.inv(U-WZW)
     sigmaRx_list.append(sigmaRx)
     xi_Rx_list.append(np.asarray(SE3.RotToVec(np.dot(Rxhat,np.linalg.inv(Rx)))).reshape(3))
-
+    # IPython.embed()
     # Estimate tx and its covariance
     # C matrix
     C = np.eye(3)-SE3.VecToRot(alpha[0])
@@ -145,8 +155,8 @@ print "translation", txhat
 print "real_sigmatx = \n", real_sigmatx
 print "avg_est_sigmatx = \n", avg_est_sigmatx
 
-cov_real = real_sigmatx
-cov_est =  avg_est_sigmatx
+cov_real = real_sigmaRx
+cov_est =  avg_est_sigmaRx
 
 # Compare y z
 nstd=1
