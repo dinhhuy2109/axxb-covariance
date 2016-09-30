@@ -50,10 +50,10 @@ Rx = np.array([[-0.17556632,  0.869125,    0.46238318],
 tx = np.array([0.341213,0.123214,-0.2])
 # Rx = tr.random_rotation_matrix()[:3,:3]
 
-sigmaA = 1e-4*np.diag((0 , 0., 0., 0.1, 0.5,0.5))
+sigmaA = 1e-4*np.diag((0 , 0., 0., 0.1, 0.00005,0.5))
 sigmaRa = sigmaA[3:,3:]
 sigmata = sigmaA[:3,:3]
-sigmaB = 1e-8*np.diag((0. , 0., 0., 1, 1, 1))
+sigmaB = 1e-10*np.diag((0. , 0., 0., 1, 1, 1))
 # diagonal = (0.0005, 0.003, 0.0005,0.025, 0.02, 0.008 )
 # diagonal = [e**2 for e in diagonal]
 # sigmaB = np.diag(diagonal)
@@ -76,11 +76,11 @@ for n in range(iters):
         beta_true = np.random.random_sample(3)
         xi_beta = np.random.multivariate_normal(np.zeros(3),sigmaRb)
         # beta.append(xi_beta + beta_true)
-        # beta.append(SE3.RotToVec(np.dot(SE3.VecToRot(xi_beta),SE3.VecToRot(beta_true))))# +  xi_beta)
+        beta.append(SE3.RotToVec(np.dot(SE3.VecToRot(xi_beta),SE3.VecToRot(beta_true))))
         xi_alpha = np.random.multivariate_normal(np.zeros(3),sigmaRa)
         alpha_true = np.dot(Rx,beta_true)
         # alpha.append(xi_alpha + alpha_true)
-        # alpha.append(SE3.RotToVec(np.dot(SE3.VecToRot(xi_alpha),SE3.VecToRot(alpha_true))))
+        alpha.append(SE3.RotToVec(np.dot(SE3.VecToRot(xi_alpha),SE3.VecToRot(alpha_true))))
     # Estimate Rx and its covariance
     # M matrix
     M = np.zeros(shape=(3,3))
@@ -91,15 +91,19 @@ for n in range(iters):
     Rxhat = np.asarray(eig_vec*np.diag(np.sqrt(1.0/eig_val))*np.linalg.inv(eig_vec)*M.T)
     # print "Rotation", Rxhat
     # Compute CovRotX
+    Huy = np.zeros(shape=(3,3))
     U = np.zeros(shape = (3,3))
     WZW = np.zeros(shape = (3,3))
     for i in range(ksamples):
         sigmaV_i = np.zeros((6,6))
-        sigmaV_i[:3,:3] = sigmaRb
-        sigmaV_i[3:6,3:6] = sigmaRa
-        # sigmaV_i[3:6,3:6] = np.dot(np.dot(SE3.VecToJacInv(x),sigma),np.transpose(SE3.VecToJacInv(x)))
+        # sigmaV_i[:3,:3] = sigmaRb
+        sigmaV_i[:3,:3] = np.dot(np.dot(SE3.VecToJacInv(beta[i]),sigmaRb),np.transpose(SE3.VecToJacInv(beta[i])))
+        # sigmaV_i[3:6,3:6] = sigmaRa
+        sigmaV_i[3:6,3:6] = np.dot(np.dot(SE3.VecToJacInv(alpha[i]),sigmaRa),np.transpose(SE3.VecToJacInv(alpha[i])))
         inv_sigmaV_i = np.linalg.inv(sigmaV_i)
         # print "inv_sigmaV_i\n", inv_sigmaV_i
+        huy1 = np.dot(np.dot(np.transpose(SE3.Hat(np.dot(Rxhat,beta[i]))),np.linalg.inv(sigmaV_i[3:6,3:6])),SE3.Hat(np.dot(Rxhat,beta[i])))
+        Huy += np.dot(np.dot(np.transpose(SE3.Hat(np.dot(Rxhat,beta[i]))),np.linalg.inv(sigmaV_i[3:6,3:6])),SE3.Hat(np.dot(Rxhat,beta[i])))
         U += np.dot(np.dot(np.transpose(JacRx_i(Rxhat,beta[i])),inv_sigmaV_i),JacRx_i(Rxhat,beta[i]))
         W_i = np.dot(np.dot(np.transpose(JacRx_i(Rxhat,beta[i])),inv_sigmaV_i),Jacbeta_i(Rxhat))
         Z_i = np.dot(np.dot(np.transpose(Jacbeta_i(Rxhat)),inv_sigmaV_i),Jacbeta_i(Rxhat))
@@ -125,82 +129,82 @@ print "real_sigmaRx = \n", real_sigmaRx
 print "avg_est_sigmaRx = \n", avg_est_sigmaRx
 print "Error = ", compare_sigma(avg_est_sigmaRx,real_sigmaRx) 
 
-# nsamples = 100
-# a = [SE3.RotToVec(np.dot(SE3.VecToRot(xi_Rx),Rx)) for xi_Rx in xi_Rx_list]
-# x1 = [aa[0] for aa in a]
-# y1 = [aa[1] for aa in a]
-# z1 = [aa[2] for aa in a]
-# x2, y2, z2 = np.random.multivariate_normal(np.asarray(compute_log(Rx)).reshape(3), avg_est_sigmaRx, nsamples).T
+nsamples = 100
+a = [SE3.RotToVec(np.dot(SE3.VecToRot(xi_Rx),Rx)) for xi_Rx in xi_Rx_list]
+x1 = [aa[0] for aa in a]
+y1 = [aa[1] for aa in a]
+z1 = [aa[2] for aa in a]
+x2, y2, z2 = np.random.multivariate_normal(np.asarray(compute_log(Rx)).reshape(3), avg_est_sigmaRx, nsamples).T
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# for i in range(nsamples):
-#     ax.scatter(x1[i], y1[i], z1[i], c='r', marker='o')
-#     ax.scatter(x2[i], y2[i], z2[i], c='b', marker='o')
-# ax.set_xlabel('X Label')
-# ax.set_ylabel('Y Label')
-# ax.set_zlabel('Z Label')
-# ax.axis('equal')
-# plt.show(False)
-
-
-
-
-
-
-cov_real = real_sigmaRx
-cov_est =  avg_est_sigmaRx
-
-# Compare y z
-nstd=1
-alpha = 0.5
-mean = (0,0)
-cov = cov_real
-cov = [[cov [0][0],cov [0][1]],[cov [1][0],cov [1][1]]]
-# cov = [[cov [1][1],cov [1][2]],[cov [2][1],cov [2][2]]]
-# cov = [[cov [0][0],cov [0][2]],[cov [2][0],cov [2][2]]]
-points  = np.random.multivariate_normal(mean,cov, size =100)
-x ,y  = points .T
-plt.plot(x ,y ,'y.')
-pos = mean
-
-def eigsorted(cov):
-    vals, vecs = np.linalg.eigh(cov)
-    order = vals.argsort()[::-1]
-    return vals[order], vecs[:,order]
-
-ax = plt.gca()
-vals, vecs = eigsorted(cov)
-theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
-# Width and height are "full" widths, not radius
-width, height = 2 * nstd * np.sqrt(vals)
-ellip1 = Ellipse(xy=pos, width=width, height=height, angle=theta,alpha=0.5,color='green',linewidth=2, fill=False,label = 'Monte Carlo result')
-ax.add_artist(ellip1)
-
-mean = (0,0)
-cov = cov_est
-cov = [[cov [0][0],cov [0][1]],[cov [1][0],cov [1][1]]]
-# cov = [[cov [1][1],cov [1][2]],[cov [2][1],cov [2][2]]]
-# cov = [[cov [0][0],cov [0][2]],[cov [2][0],cov [2][2]]]
-points_est = np.random.multivariate_normal(mean, cov , size =100)
-x_est,y_est = points_est.T
-plt.plot(x_est,y_est,'b.')
-
-pos=mean
-ax = plt.gca()
-vals, vecs = eigsorted(cov)
-theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
-# Width and height are "full" widths, not radius
-width, height = 2 * nstd * np.sqrt(vals)
-ellip2 = Ellipse(xy=pos, width=width, height=height, angle=theta,alpha=0.5,color='red', linewidth=2, fill=False,label ='Estimated covariance')
-ax.add_artist(ellip2)
-
-plt.xlabel(r'${\bf{\xi}}_{1}$',fontsize=25, labelpad=10)
-plt.ylabel(r'${\bf{\xi}}_{2}$',fontsize=25, labelpad=5)
-plt.legend(handles=[ellip1, ellip2])
-ax.set(aspect='equal')
-start, end = ax.get_xlim()
-ax.xaxis.set_ticks(np.arange(start, end, 0.004))
-start, end = ax.get_ylim()
-ax.yaxis.set_ticks(np.arange(start, end, 0.004))
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+for i in range(nsamples):
+    ax.scatter(x1[i], y1[i], z1[i], c='r', marker='o')
+    ax.scatter(x2[i], y2[i], z2[i], c='b', marker='o')
+ax.set_xlabel('X Label')
+ax.set_ylabel('Y Label')
+ax.set_zlabel('Z Label')
+ax.axis('equal')
 plt.show(False)
+
+
+
+
+
+
+# cov_real = real_sigmaRx
+# cov_est =  avg_est_sigmaRx
+
+# # Compare y z
+# nstd=1
+# alpha = 0.5
+# mean = (0,0)
+# cov = cov_real
+# cov = [[cov [0][0],cov [0][1]],[cov [1][0],cov [1][1]]]
+# # cov = [[cov [1][1],cov [1][2]],[cov [2][1],cov [2][2]]]
+# # cov = [[cov [0][0],cov [0][2]],[cov [2][0],cov [2][2]]]
+# points  = np.random.multivariate_normal(mean,cov, size =100)
+# x ,y  = points .T
+# plt.plot(x ,y ,'y.')
+# pos = mean
+
+# def eigsorted(cov):
+#     vals, vecs = np.linalg.eigh(cov)
+#     order = vals.argsort()[::-1]
+#     return vals[order], vecs[:,order]
+
+# ax = plt.gca()
+# vals, vecs = eigsorted(cov)
+# theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+# # Width and height are "full" widths, not radius
+# width, height = 2 * nstd * np.sqrt(vals)
+# ellip1 = Ellipse(xy=pos, width=width, height=height, angle=theta,alpha=0.5,color='green',linewidth=2, fill=False,label = 'Monte Carlo result')
+# ax.add_artist(ellip1)
+
+# mean = (0,0)
+# cov = cov_est
+# cov = [[cov [0][0],cov [0][1]],[cov [1][0],cov [1][1]]]
+# # cov = [[cov [1][1],cov [1][2]],[cov [2][1],cov [2][2]]]
+# # cov = [[cov [0][0],cov [0][2]],[cov [2][0],cov [2][2]]]
+# points_est = np.random.multivariate_normal(mean, cov , size =100)
+# x_est,y_est = points_est.T
+# plt.plot(x_est,y_est,'b.')
+
+# pos=mean
+# ax = plt.gca()
+# vals, vecs = eigsorted(cov)
+# theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+# # Width and height are "full" widths, not radius
+# width, height = 2 * nstd * np.sqrt(vals)
+# ellip2 = Ellipse(xy=pos, width=width, height=height, angle=theta,alpha=0.5,color='red', linewidth=2, fill=False,label ='Estimated covariance')
+# ax.add_artist(ellip2)
+
+# plt.xlabel(r'${\bf{\xi}}_{1}$',fontsize=25, labelpad=10)
+# plt.ylabel(r'${\bf{\xi}}_{2}$',fontsize=25, labelpad=5)
+# plt.legend(handles=[ellip1, ellip2])
+# ax.set(aspect='equal')
+# start, end = ax.get_xlim()
+# ax.xaxis.set_ticks(np.arange(start, end, 0.004))
+# start, end = ax.get_ylim()
+# ax.yaxis.set_ticks(np.arange(start, end, 0.004))
+# plt.show(False)

@@ -50,9 +50,11 @@ tx = np.array([0.341213,0.123214,-0.2])
 # Rx = tr.random_rotation_matrix()[:3,:3]
 
 sigmaA = 1e-5*np.diag((4 , 9, 3, 0.2, 0.5, 0.3))
+sigmaA = 1e-10*np.diag((2 , 2, 2, 10, 1, 10))
 sigmaRa = sigmaA[3:,3:]
 sigmata = sigmaA[:3,:3]
 sigmaB = 1e-5*np.diag((3 , 6, 8, 0.3, 0.7, 0.5))
+sigmaB = 1e-6*np.diag((2 , 2, 2, 10, 0.01, 10))
 sigmaRb = sigmaB[3:,3:]
 sigmatb = sigmaB[:3,:3]
 print "real X:\n", Rx
@@ -161,8 +163,8 @@ print "real_sigmatx = \n", real_sigmatx
 print "avg_est_sigmatx = \n", avg_est_sigmatx
 print "Error = ", compare_sigma(avg_est_sigmatx,real_sigmatx) 
 
-cov_real = real_sigmatx
-cov_est =  avg_est_sigmatx
+cov_real = real_sigmaRx
+cov_est =  avg_est_sigmaRx
 
 # Compare y z
 nstd=1
