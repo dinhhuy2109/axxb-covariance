@@ -1,4 +1,7 @@
 On the uncertainty of the hand-eye calibration problem AX=XB
+
+Note: This package is deprecated! Please use [python-cope](https://github.com/dinhhuy2109/python-cope) instead!
+
 ------------
 Author: Huy Nguyen
 Email: huy.nguyendinh09@gmail.com
